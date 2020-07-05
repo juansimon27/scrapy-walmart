@@ -1,5 +1,5 @@
 # Web Crawler + Data Ingestion
-A python script to obtain product data and store availability from Walmart Canada website for specific categories and branches. It also digest and integrate additional data to the database produced by the scraper.
+A python script to obtain product data and store availability from Walmart Canada website for specific categories and branches. It also digests and integrates additional data to the database produced by the scraper.
 
 ## Packages
 - Scrapy
