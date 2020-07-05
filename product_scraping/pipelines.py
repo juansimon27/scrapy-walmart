@@ -8,16 +8,23 @@ from models import Base
 
 
 class StoragePipeline:
+
     def __init__(self, db_engine=engine):
         self.engine = db_engine
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
 
+    def open_spider(self, spider):
+        self.session = self.Session()
+
+    def close_spider(self, spider):
+        self.session.close()
+
     def process_item(self, item, spider):
-        session = self.Session()
+
         # Check if the Product already exists
         product = (
-            session.query(Product)
+                self.session.query(Product)
                 .filter_by(store=item["store"], sku=item["sku"])
                 .first()
         )
@@ -34,24 +41,24 @@ class StoragePipeline:
         product.package = item['package']
         product.category = item['category']
 
-        session.add(product)
-        session.commit()
+        self.session.add(product)
+        self.session.commit()
 
         # Check if the BranchProduct already exists
         branch_product = (
-            session.query(BranchProduct)
+                self.session.query(BranchProduct)
                 .filter_by(product=product, branch=item["branch"])
                 .first()
         )
 
-        if branch_product is None:
-            branch_product = BranchProduct(product=product, branch=item["branch"])
+        if item['price']:
+            if branch_product is None:
+                branch_product = BranchProduct(product=product, branch=item["branch"])
 
-        branch_product.stock = item["stock"]
-        branch_product.price = item["price"]
+            branch_product.stock = item["stock"]
+            branch_product.price = item["price"]
+            self.session.add(branch_product)
 
-        session.add(branch_product)
-        session.commit()
-        session.close()
+        self.session.commit()
 
         return item

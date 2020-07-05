@@ -1,28 +1,62 @@
 import os
+import sys
 import re
 import pandas as pd
-from database_setup import engine
+
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if PROJECT_DIR not in sys.path:
+    sys.path.append(PROJECT_DIR)
+
 from models import BranchProduct, Product, Base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
 ASSETS_DIR = os.path.join(PROJECT_DIR, "assets")
 PRODUCTS_PATH = os.path.join(ASSETS_DIR, "PRODUCTS.csv")
 PRICES_STOCK_PATH = os.path.join(ASSETS_DIR, "PRICES-STOCK.csv")
+DB_DIR = os.path.join(PROJECT_DIR, 'product_scraping', 'db.sqlite')
+
+engine = create_engine(r'sqlite:///'+DB_DIR)
 
 
+# Styling functions
+def lower_col_names(*args):
+    for df in args:
+        df.columns = [column.lower() for column in df.columns]
+
+def conv_to_category(df, *args):
+    for col in args:
+        df[col] = df[col].astype('category')
+
+def capitalize_col_names(df, col_names):
+    for col in col_names:
+        df[col] = df[col].str.capitalize()
+
+def lower_col_records(df, col_names):
+    for col in col_names:
+        df[col] = df[col].str.lower()
+
+# Process CSV files
 def process_csv_files():
     products_df = pd.read_csv(filepath_or_buffer=PRODUCTS_PATH, sep="|")
     prices_stock_df = pd.read_csv(filepath_or_buffer=PRICES_STOCK_PATH, sep="|")
 
-    # Reshape & filtering
+    # Reshape & filtering for STOCK > 0 and BRANCHES MM, RHSM
     prices_stock_df = prices_stock_df[prices_stock_df['STOCK'] > 0]
     prices_stock_df = prices_stock_df.loc[prices_stock_df['BRANCH'].isin(['MM', 'RHSM'])]
-    products_df = products_df.fillna(value='')
+
+    # Dealing with null values
+    products_df.fillna(value='', inplace=True)
+
+    # Adding STORE and URL columns
     products_df['STORE'] = 'Richarts'
     products_df['URL'] = 'n/a'
+
+    # Filtering SKU values of products_df present in prices_stock_df
     condition = products_df['SKU'].isin(prices_stock_df['SKU'].values)
     products_df = products_df[condition]
+
     # Taking the lowest pricing and the total stock availability
     branchproducts_df = prices_stock_df.groupby(['SKU', 'BRANCH'], as_index=False, sort=False,
                                                 group_keys=False).aggregate( {'PRICE': 'min', 'STOCK': 'sum'})
@@ -32,21 +66,27 @@ def process_csv_files():
 
     # Cleaning & styling
     products_df['DESCRIPTION'] = products_df['DESCRIPTION'].apply(lambda x: re.sub('<.*?>', '', x))
+    products_df['PACKAGE'] = products_df['DESCRIPTION'].apply(lambda x: re.findall(r'(?!0)\d+\s?\w+\.?$', x))
+    products_df['PACKAGE'] = products_df['PACKAGE'].apply(''.join).apply(lambda x: x.replace('.', ''))
+
     products_df['CATEGORY'] = products_df['CATEGORY'].str.cat(
         [products_df['SUB_CATEGORY'], products_df['SUB_SUB_CATEGORY']], sep=' | ')
-    products_df['CATEGORY'] = products_df['CATEGORY'].str.lower()
+
+    # Drop columns not required
     products_df = products_df.drop(
         columns=['SUB_CATEGORY', 'SUB_SUB_CATEGORY', 'ORGANIC_ITEM', 'KIRLAND_ITEM', 'BUY_UNIT', 'FINELINE_NUMBER',
                  'DESCRIPTION_STATUS'])
-    products_df['PACKAGE'] = products_df['DESCRIPTION'].apply(lambda x: re.findall(r'(?!0)\d+\s?\w+\.?$', x))
-    products_df['PACKAGE'] = products_df['PACKAGE'].apply(''.join).apply(lambda x: x.replace('.', ''))
-    products_df['NAME'] = products_df['NAME'].str.capitalize()
-    products_df['BRAND'] = products_df['BRAND'].str.capitalize()
-    products_df['DESCRIPTION'] = products_df['DESCRIPTION'].str.capitalize()
-    products_df['PACKAGE'] = products_df['PACKAGE'].str.lower()
 
-    products_df.columns = [column.lower() for column in products_df.columns]
-    branchproducts_df.columns = [column.lower() for column in branchproducts_df.columns]
+    # Using styling functions
+    capitalize_col_names(products_df, ['NAME', 'BRAND', 'DESCRIPTION'])
+    lower_col_records(products_df, ['CATEGORY', 'PACKAGE'])
+    # products_df['NAME'] = products_df['NAME'].str.capitalize()
+    # products_df['BRAND'] = products_df['BRAND'].str.capitalize()
+    # products_df['DESCRIPTION'] = products_df['DESCRIPTION'].str.capitalize()
+    # products_df['CATEGORY'] = products_df['CATEGORY'].str.lower()
+    # products_df['PACKAGE'] = products_df['PACKAGE'].str.lower()
+
+    lower_col_names(products_df, branchproducts_df)
 
     # Loading to SQLite DB
     Base.metadata.create_all(engine)
