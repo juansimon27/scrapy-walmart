@@ -17,7 +17,7 @@ PRODUCTS_PATH = os.path.join(ASSETS_DIR, "PRODUCTS.csv")
 PRICES_STOCK_PATH = os.path.join(ASSETS_DIR, "PRICES-STOCK.csv")
 DB_DIR = os.path.join(PROJECT_DIR, 'product_scraping', 'db.sqlite')
 
-engine = create_engine(r'sqlite:///'+DB_DIR)
+engine = create_engine(r'sqlite:///' + DB_DIR)
 
 
 # Styling functions
@@ -25,17 +25,21 @@ def lower_col_names(*args):
     for df in args:
         df.columns = [column.lower() for column in df.columns]
 
+
 def conv_to_category(df, *args):
     for col in args:
         df[col] = df[col].astype('category')
+
 
 def capitalize_col_names(df, col_names):
     for col in col_names:
         df[col] = df[col].str.capitalize()
 
+
 def lower_col_records(df, col_names):
     for col in col_names:
         df[col] = df[col].str.lower()
+
 
 # Process CSV files
 def process_csv_files():
@@ -59,7 +63,7 @@ def process_csv_files():
 
     # Taking the lowest pricing and the total stock availability
     branchproducts_df = prices_stock_df.groupby(['SKU', 'BRANCH'], as_index=False, sort=False,
-                                                group_keys=False).aggregate( {'PRICE': 'min', 'STOCK': 'sum'})
+                                                group_keys=False).aggregate({'PRICE': 'min', 'STOCK': 'sum'})
 
     # Converting data types
     prices_stock_df['BRANCH'] = prices_stock_df['BRANCH'].astype('category')
@@ -80,12 +84,6 @@ def process_csv_files():
     # Using styling functions
     capitalize_col_names(products_df, ['NAME', 'BRAND', 'DESCRIPTION'])
     lower_col_records(products_df, ['CATEGORY', 'PACKAGE'])
-    # products_df['NAME'] = products_df['NAME'].str.capitalize()
-    # products_df['BRAND'] = products_df['BRAND'].str.capitalize()
-    # products_df['DESCRIPTION'] = products_df['DESCRIPTION'].str.capitalize()
-    # products_df['CATEGORY'] = products_df['CATEGORY'].str.lower()
-    # products_df['PACKAGE'] = products_df['PACKAGE'].str.lower()
-
     lower_col_names(products_df, branchproducts_df)
 
     # Loading to SQLite DB

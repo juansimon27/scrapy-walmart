@@ -2,9 +2,6 @@ import scrapy
 import json
 import re
 from product_scraping.items import Product
-from scrapy.spidermiddlewares.httperror import HttpError
-from twisted.internet.error import DNSLookupError
-from twisted.internet.error import TimeoutError, TCPTimedOutError
 
 
 class CaWalmartBot(scrapy.Spider):
@@ -65,7 +62,7 @@ class CaWalmartBot(scrapy.Spider):
         item['name'] = name
 
         url_store = 'https://www.walmart.ca/api/product-page/find-in-store?' \
-                   'latitude={}&longitude={}&lang=en&upc={}'
+            'latitude={}&longitude={}&lang=en&upc={}'
 
         for k in branches.keys():
             yield scrapy.http.Request(url_store.format(branches[k][0], branches[k][1], upc[0]),

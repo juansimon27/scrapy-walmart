@@ -24,9 +24,7 @@ class StoragePipeline:
 
         # Check if the Product already exists
         product = (
-                self.session.query(Product)
-                .filter_by(store=item["store"], sku=item["sku"])
-                .first()
+            self.session.query(Product).filter_by(store=item["store"], sku=item["sku"]).first()
         )
 
         if product is None:
@@ -46,9 +44,7 @@ class StoragePipeline:
 
         # Check if the BranchProduct already exists
         branch_product = (
-                self.session.query(BranchProduct)
-                .filter_by(product=product, branch=item["branch"])
-                .first()
+            self.session.query(BranchProduct).filter_by(product=product, branch=item["branch"]).first()
         )
 
         if item['price']:
