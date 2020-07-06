@@ -9,6 +9,10 @@ A python script to obtain product data and store availability from Walmart Canad
 ## Execution Workflow
 
 - Run **spider.py** within **product_scraping** folder: 
-    - spider crawl ca_walmart
+  ```
+  spider crawl ca_walmart
+  ```
 - Run **ingestion.py** within **additional_data** folder:
-    - Command: python ingestion.py
+  ```
+  python ingestion.py
+  ```
