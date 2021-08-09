@@ -24,7 +24,7 @@ PyHamcrest==2.0.2
 pyOpenSSL==19.1.0
 python-dateutil==2.8.1
 pytz==2020.1
-pywin32==227
+pywin32==301
 queuelib==1.5.0
 requests==2.23.0
 Scrapy==2.1.0
